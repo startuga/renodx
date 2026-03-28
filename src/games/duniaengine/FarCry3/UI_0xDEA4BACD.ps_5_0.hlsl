@@ -93,8 +93,8 @@ void main(
   o0.w = r0.w;
   r0.xyz = cb0[37].zzz * r0.xyz;
   r0.xyz = exp2(r0.xyz);
-  r0.xyz = saturate(cb0[37].xxx + r0.xyz);
+  r0.xyz = max(0, cb0[37].xxx + r0.xyz);
   r0.xyz = cb0[37].yyy * r0.xyz;
-  o0.xyz = sqrt(r0.xyz);
+  o0.xyz = sign(r0.xyz) * sqrt(abs(r0.xyz));
   return;
 }

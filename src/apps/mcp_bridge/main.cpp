@@ -5,6 +5,9 @@
 
 #include <Windows.h>
 
+#include <fcntl.h>
+#include <io.h>
+
 #include <algorithm>
 #include <charconv>
 #include <cstdint>
@@ -274,17 +277,20 @@ struct HandleFrameResult {
   return pipes;
 }
 
-const std::vector<ToolDescriptor> FALLBACK_DEVKIT_TOOLS = [] {
-  std::vector<ToolDescriptor> tools = {};
-  tools.reserve(devkit_tool_catalog::METADATA.size());
-  for (const auto& [tool_name, metadata] : devkit_tool_catalog::METADATA) {
-    tools.push_back(ToolDescriptor{
-        .name = tool_name,
-        .metadata = metadata,
-    });
-  }
+const std::vector<ToolDescriptor>& GetFallbackDevkitTools() {
+  static const std::vector<ToolDescriptor> tools = [] {
+    std::vector<ToolDescriptor> t = {};
+    t.reserve(devkit_tool_catalog::METADATA.size());
+    for (const auto& [tool_name, metadata] : devkit_tool_catalog::METADATA) {
+      t.push_back(ToolDescriptor{
+          .name = tool_name,
+          .metadata = metadata,
+      });
+    }
+    return t;
+  }();
   return tools;
-}();
+}
 
 const std::array<ToolDescriptor, 2> LOCAL_TOOLS = {
     ToolDescriptor{
@@ -975,11 +981,11 @@ class Bridge {
 
     if (method == mcp::METHOD_TOOLS_LIST) {
       std::vector<BridgeToolDescriptor> tools = {};
-      tools.reserve(LOCAL_TOOLS.size() + FALLBACK_DEVKIT_TOOLS.size());
+      tools.reserve(LOCAL_TOOLS.size() + GetFallbackDevkitTools().size());
       for (const auto& tool : LOCAL_TOOLS) {
         UpsertTool(tools, MakeBridgeToolDescriptor(tool));
       }
-      for (const auto& tool : FALLBACK_DEVKIT_TOOLS) {
+      for (const auto& tool : GetFallbackDevkitTools()) {
         UpsertTool(tools, MakeBridgeToolDescriptor(tool));
       }
       for (const auto& tool : GetBackendTools()) {
@@ -1155,6 +1161,9 @@ class Bridge {
 }  // namespace
 
 int main(int argc, char** argv) {
+  _setmode(_fileno(stdin), _O_BINARY);
+  _setmode(_fileno(stdout), _O_BINARY);
+
   auto parse_result = ParseOptions(argc, argv);
   if (!parse_result.options.has_value()) {
     return parse_result.exit_code;

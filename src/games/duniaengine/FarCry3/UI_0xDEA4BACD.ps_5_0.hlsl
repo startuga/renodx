@@ -1,3 +1,5 @@
+#include "../common.hlsl"
+
 Texture2D<float4> t0 : register(t0);
 SamplerState s0_s : register(s0);
 cbuffer cb0 : register(b0){
@@ -95,6 +97,11 @@ void main(
   r0.xyz = exp2(r0.xyz);
   r0.xyz = saturate(cb0[37].xxx + r0.xyz);
   r0.xyz = cb0[37].yyy * r0.xyz;
-  o0.xyz = sqrt(r0.xyz);
+  r0.xyz = sqrt(r0.xyz);
+
+  // === NEW: Pre-scale UI by uiNits/gameNits ===
+  r0.xyz *= injectedData.toneMapUINits / injectedData.toneMapGameNits;
+
+  o0.xyz = r0.xyz;
   return;
 }

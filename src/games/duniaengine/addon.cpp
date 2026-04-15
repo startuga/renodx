@@ -119,11 +119,34 @@ renodx::mods::shader::CustomShaders custom_shaders = {
     CustomShaderEntry(0x86DBC4B9),                                                    // underwater effect
     CustomShaderEntry(0x0BFBC3A9),                                                    // water splash
     CustomShaderEntry(0x1CA344D0),                                                    // water splash
-    CustomShaderEntryCallback(0xDEA4BACD, [](reshade::api::command_list* cmd_list) {  // UI
-      if (game != 0) return true;
-      game = 2;
-      return true;
-    }),
+    // Before:
+    //CustomShaderEntryCallback(0xDEA4BACD, [](reshade::api::command_list* cmd_list) {  // UI
+      //if (game != 0) return true;
+      //game = 2;
+      //return true;
+    //}),
+
+    // After:
+    {
+      0xDEA4BACD,
+      {
+        .crc32 = 0xDEA4BACD,
+        .code = __0xDEA4BACD,
+        .on_draw = [](auto* cmd_list) {
+          if (game == 0) game = 2;  // Game detection
+          auto rtvs = renodx::utils::swapchain::GetRenderTargets(cmd_list);
+          bool changed = false;
+          for (auto rtv : rtvs) {
+            changed = renodx::mods::swapchain::ActivateCloneHotSwap(cmd_list->get_device(), rtv);
+          }
+          if (changed) {
+            renodx::mods::swapchain::FlushDescriptors(cmd_list);
+            renodx::mods::swapchain::RewriteRenderTargets(cmd_list, rtvs.size(), rtvs.data(), {0});
+          }
+          return true;
+        },
+      },
+    },
     CustomShaderEntry(0x7905FD45),  // videos
     // Far Cry 3
     CustomShaderEntryCallback(0x1FF398C9, [](reshade::api::command_list* cmd_list) {  // videos
